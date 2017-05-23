@@ -6,6 +6,10 @@ const createBrowserHistory = require('history/lib/createBrowserHistory');
 
 const h = require('./helpers');
 
+// Firebase
+const Rebase = require('re-base');
+const base = Rebase.createClass('https://catch-of-the-day-28e34.firebaseio.com/');
+
 /**
  * App component
  */
@@ -16,6 +20,13 @@ const App = React.createClass({
       fishes: {},
       order: {},
     };
+  },
+
+  componentDidMount: function() {
+    base.syncState(`${this.props.params.storeId}/fishes`, {
+      context: this,
+      state: 'fishes',
+    });
   },
 
   addFish: function(fish) {
@@ -32,8 +43,13 @@ const App = React.createClass({
 
   renderFish: function(key) {
     return (
-      <Fish key={key} index={key} details={this.state.fishes[key]} />
+      <Fish key={key} index={key} details={this.state.fishes[key]} addToOrder={this.addToOrder} />
     )
+  },
+
+  addToOrder: function(key) {
+    this.state.order[key] = this.state.order[key] + 1 || 1;
+    this.setState({ order: this.state.order });
   },
 
   render: function() {
@@ -45,7 +61,7 @@ const App = React.createClass({
             {Object.keys(this.state.fishes).map(this.renderFish)}
           </ul>
         </div>
-        <Order />
+        <Order fishes={this.state.fishes} order={this.state.order} />
         <Inventory addFish={this.addFish} loadSamples={this.loadSamples} />
       </div>
     )
@@ -53,17 +69,24 @@ const App = React.createClass({
 })
 
 const Fish = React.createClass({
+  onButtonClick: function() {
+    this.props.addToOrder(this.props.index);
+  },
+
   render: function() {
     const details = this.props.details;
+    const isAvailable = details.status === 'available';
+    const buttonText = isAvailable ? 'Add to Order' : 'Sold Out!';
 
     return (
       <li className="menu-fish">
         <img src={details.image} alt={details.name} />
         <h3 className="fish-name">
           {details.name}
-          <span className="price">{details.price}</span>
+          <span className="price">{h.formatPrice(details.price)}</span>
         </h3>
         <p>{details.desc}</p>
+        <button disabled={!isAvailable} onClick={this.onButtonClick}>{buttonText}</button>
       </li>
     );
   },
@@ -121,13 +144,54 @@ const Header = React.createClass({
     )
   }
 })
+
 const Order = React.createClass({
-  render: function() {
+  renderOrder: function(key) {
+    const fish = this.props.fishes[key];
+    const count = this.props.order[key];
+
+    if (!fish) {
+      return <li key={key}>Sorry, fish no longer available</li>
+    }
+
     return (
-      <p>Order</p>
+      <li>
+        {count} lbs
+        {fish.name}
+        <span className="price">{h.formatPrice(count * fish.price)}</span>
+      </li>
+    )
+  },
+
+  render: function() {
+    const orderIds = Object.keys(this.props.order);
+    const total = orderIds.reduce((prev, key) => {
+      const fish = this.props.fishes[key];
+      const count = this.props.order[key];
+      const isAvailable = fish && fish.status === 'available';
+
+      if(fish && isAvailable) {
+        return prev + (count * parseInt(fish.price) || 0);
+      }
+
+      return prev;
+    }, 0);
+
+    return (
+      <div className="order-wrap">
+        <h2 className="order-title">Your Order</h2>
+        <ul className="order">
+          {orderIds.map(this.renderOrder)}
+          <li className="total">
+            <strong>Total:</strong>
+            {h.formatPrice(total)}
+          </li>
+        </ul>
+      </div>
     )
   }
 })
+
 const Inventory = React.createClass({
   render: function() {
     return (
