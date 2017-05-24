@@ -1,25 +1,28 @@
-import React from 'react';
+import React, { Component } from 'react';
 import Inventory from './Inventory';
 import Order from './Order';
 import Header from './Header';
 import Fish from './Fish';
-import Catalyst from 'react-catalyst';
+import { LinkedStateMixin } from 'react-catalyst';
+import reactMixin from 'react-mixin';
+import autobind from 'autobind-decorator';
 
 // Firebase
 const Rebase = require('re-base');
 const base = Rebase.createClass('https://catch-of-the-day-28e34.firebaseio.com/');
 
-const App = React.createClass({
-  mixins: [Catalyst.LinkedStateMixin],
+@autobind
+class App extends Component {
+  constructor() {
+    super();
 
-  getInitialState: function() {
-    return {
+    this.state = {
       fishes: {},
       order: {},
-    };
-  },
+    }
+  }
 
-  componentDidMount: function() {
+  componentDidMount() {
     base.syncState(`${this.props.params.storeId}/fishes`, {
       context: this,
       state: 'fishes',
@@ -32,46 +35,46 @@ const App = React.createClass({
         order: JSON.parse(localStorageRef)
       });
     }
-  },
+  }
 
-  componentWillUpdate: function(nextProps, nextState) {
+  componentWillUpdate(nextProps, nextState) {
     localStorage.setItem(`order-${this.props.params.storeId}`, JSON.stringify(nextState.order));
-  },
+  }
 
-  addFish: function(fish) {
+  addFish(fish) {
     const timestamp = Date.now();
     this.state.fishes[`fish-${timestamp}`] = fish;
     this.setState({ fishes: this.state.fishes });
-  },
+  }
 
-  removeFish: function(key) {
+  removeFish(key) {
     this.state.fishes[key] = null;
     this.setState({ fishes: this.state.fishes });
-  },
+  }
 
-  loadSamples: function() {
+  loadSamples() {
     this.setState({
       fishes: require('../sample-fishes'),
     });
-  },
+  }
 
-  renderFish: function(key) {
+  renderFish(key) {
     return (
       <Fish key={key} index={key} details={this.state.fishes[key]} addToOrder={this.addToOrder} />
     )
-  },
+  }
 
-  addToOrder: function(key) {
+  addToOrder(key) {
     this.state.order[key] = this.state.order[key] + 1 || 1;
     this.setState({ order: this.state.order });
-  },
+  }
 
-  removeFromOrder: function(key) {
+  removeFromOrder(key) {
     delete this.state.order[key];
     this.setState({ order: this.state.order });
-  },
+  }
 
-  render: function() {
+  render() {
     return (
       <div className="catch-of-the-day">
         <div className="menu">
@@ -81,10 +84,12 @@ const App = React.createClass({
           </ul>
         </div>
         <Order fishes={this.state.fishes} order={this.state.order} removeFromOrder={this.removeFromOrder} />
-        <Inventory addFish={this.addFish} removeFish={this.removeFish} loadSamples={this.loadSamples} fishes={this.state.fishes} linkState={this.linkState} />
+        <Inventory addFish={this.addFish} removeFish={this.removeFish} loadSamples={this.loadSamples} fishes={this.state.fishes} linkState={this.linkState.bind(this)} />
       </div>
     )
   }
-})
+}
+
+reactMixin.onClass(App, LinkedStateMixin);
 
 export default App;

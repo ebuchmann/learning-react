@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { Component } from 'react';
 
-const Header = React.createClass({
-  render: function() {
+class Header extends Component {
+  render() {
     return (
       <header className="top">
         <h1>
@@ -17,11 +17,11 @@ const Header = React.createClass({
         </h3>
       </header>
     )
-  },
+  }
+}
 
-  propTypes: {
-    tagline: React.PropTypes.string.isRequired,
-  },
-})
+Header.propTypes = {
+  tagline: React.PropTypes.string.isRequired,
+}
 
 export default Header;
